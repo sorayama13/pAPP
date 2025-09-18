@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>発酵食品・食物繊維記録アプリ</title>
+    
+    <!-- PWA設定 -->
+    <link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;発酵食品記録アプリ&quot;,&quot;short_name&quot;:&quot;発酵記録&quot;,&quot;description&quot;:&quot;発酵食品・食物繊維・食品多様性を記録するアプリ&quot;,&quot;start_url&quot;:&quot;/&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#ffffff&quot;,&quot;theme_color&quot;:&quot;#4CAF50&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM0Q0FGNTAiLz4KPHN2ZyB4PSI0OCIgeT0iNDgiIHdpZHRoPSI5NiIgaGVpZ2h0PSI5NiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiPgo8cGF0aCBkPSJNMTIgMkM2LjQ4IDIgMiA2LjQ4IDIgMTJzNC40OCAxMCAxMCAxMCAxMC00LjQ4IDEwLTEwUzE3LjUyIDIgMTIgMnptMCAxOGMtNC40MSAwLTgtMy41OS04LTggMy41OS04IDgtOCA0LjQxIDAgOCAzLjU5IDggOC04IDMuNTktOCA4eiIvPgo8L3N2Zz4KPC9zdmc+&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}],"}"}>
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="発酵記録">
+    
+    <!-- 外部ライブラリ -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        /* ヘッダー */
+        .header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .date-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 16px;
+            min-width: 44px;
+            min-height: 44px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .reset-btn {
+            opacity: 0.7;
+            font-size: 14px;
+        }
+        
+        .reset-btn:hover {
+            opacity: 1;
+        }
+        
+        .current-date {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .progress-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .summary-item {
+            background: rgba(255,255,255,0.2);
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .summary-value {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .summary-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        /* メインコンテンツ */
+        .main-content {
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+        
+        .section-card {
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .section-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 44px;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .section-toggle {
+            font-size: 20px;
+            color: #666;
+            transition: transform 0.3s;
+        }
+        
+        .section-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+        
+        .section-content {
+            padding: 20px;
+            display: block;
+        }
+        
+        .section-content.collapsed {
+            display: none;
+        }
+        
+        /* 発酵食品セクション */
+        .fermented-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .fermented-option {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-height: 44px;
+        }
+        
+        .fermented-option:hover {
+            background: #e9ecef;
+        }
+        
+        .fermented-option.selected {
+            background: #d4edda;
+            border: 2px solid #4CAF50;
+        }
+        
+        .fermented-checkbox {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+        }
+        
+        .fermented-label {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .fermented-summary {
+            text-align: center;
+            padding: 15px;
+            background: #e8f5e8;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        
+        /* 食物繊維セクション */
+        .fiber-categories {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .fiber-category {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-height: 44px;
+        }
+        
+        .fiber-category:hover {
+            background: #e9ecef;
+            border-color: #4CAF50;
+        }
+        
+        .fiber-category:active {
+            transform: scale(0.95);
+        }
+        
+        .fiber-category-name {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .fiber-category-value {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .fiber-summary {
+            text-align: center;
+            padding: 15px;
+            background: #e8f5e8;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        
+        .fiber-progress {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .fiber-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            transition: width 0.3s;
+        }
+        
+        /* 食物繊維詳細表示 */
+        .fiber-details {
+            margin: 15px 0;
+        }
+        
+        .fiber-record-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+        
+        .fiber-record-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .fiber-record-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .fiber-record-value {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .remove-fiber-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            min-width: 44px;
+            min-height: 44px;
+        }
+        
+        .remove-fiber-btn:hover {
+            background: #c82333;
+        }
+        
+        /* 今週の植物一覧表示 */
+        .weekly-plants-list {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .weekly-plants-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .weekly-plants-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 8px;
+        }
+        
+        .weekly-plant-tag {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 6px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            text-align: center;
+            border: 1px solid #c8e6c9;
+        }
+        
+        .weekly-plant-tag.duplicate {
+            background: #fff3cd;
+            color: #856404;
+            border-color: #ffeaa7;
+        }
+        
+        /* 食品多様性セクション */
+        .plant-input-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .plant-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            min-height: 44px;
+        }
+        
+        .plant-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .add-plant-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            min-width: 44px;
+            min-height: 44px;
+        }
+        
+        .add-plant-btn:hover {
+            background: #45a049;
+        }
+        
+        .plants-list {
+            margin-top: 15px;
+        }
+        
+        .plant-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+        
+        .plant-name {
+            font-size: 14px;
+        }
+        
+        .remove-plant-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .diversity-progress {
+            margin-top: 15px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            transition: width 0.3s;
+        }
+        
+        /* ボトムナビゲーション */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            z-index: 100;
+        }
+        
+        .nav-item {
+            flex: 1;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            color: #666;
+            transition: color 0.3s;
+            min-height: 44px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .nav-item.active {
+            color: #4CAF50;
+        }
+        
+        .nav-icon {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .nav-label {
+            font-size: 12px;
+        }
+
+        
+        
+        /* レポート画面 */
+        .report-section {
+            margin-bottom: 30px;
+        }
+        
+        .report-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        
+        /* レスポンシブ調整 */
+        @media (max-width: 480px) {
+            .fermented-options,
+            .fiber-categories {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* アニメーション */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            animation: fadeIn 0.3s ease-in;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <header class="header">
+            <div class="date-nav">
+                <button class="nav-btn" onclick="changeDate(-1)">‹</button>
+                <div class="current-date" id="currentDate"></div>
+                <button class="nav-btn" onclick="changeDate(1)">›</button>
+                <button class="nav-btn reset-btn" onclick="resetAllData()" title="データをリセット">🔄</button>
+            </div>
+            <div class="progress-summary">
+                <div class="summary-item">
+                    <div class="summary-value" id="fermentedCount">0</div>
+                    <div class="summary-label">発酵食品</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="fiberCount">0g</div>
+                    <div class="summary-label">食物繊維</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="plantCount">0</div>
+                    <div class="summary-label">植物種類</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- メインコンテンツ -->
+        <main class="main-content" id="mainContent">
+            <!-- 発酵食品記録セクション -->
+            <div class="section-card">
+                <div class="section-header" onclick="toggleSection('fermented')">
+                    <div class="section-title">発酵食品記録</div>
+                    <div class="section-toggle" id="fermentedToggle">▼</div>
+                </div>
+                <div class="section-content" id="fermentedContent">
+                    <div class="fermented-options" id="fermentedOptions">
+                        <!-- 動的に生成 -->
+                    </div>
+                    <div class="fermented-summary" id="fermentedSummary">
+                        今日は <span id="fermentedSelected">0</span> 種類の発酵食品を食べました
+                        <br>
+                        <small>目標: 1日2種類以上</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 食物繊維記録セクション -->
+            <div class="section-card">
+                <div class="section-header" onclick="toggleSection('fiber')">
+                    <div class="section-title">食物繊維記録</div>
+                    <div class="section-toggle" id="fiberToggle">▼</div>
+                </div>
+                <div class="section-content" id="fiberContent">
+                    <div class="fiber-categories" id="fiberCategories">
+                        <!-- 動的に生成 -->
+                    </div>
+                    <div class="fiber-details" id="fiberDetails">
+                        <!-- 動的に生成される記録詳細 -->
+                    </div>
+                    <div class="fiber-summary" id="fiberSummary">
+                        <div>今日の食物繊維: <span id="fiberTotal">0</span>g / <span id="fiberGoal">18</span>g</div>
+                        <div class="fiber-progress">
+                            <div class="fiber-progress-bar" id="fiberProgressBar" style="width: 0%"></div>
+                        </div>
+                        <small>目標達成まで <span id="fiberRemaining">18</span>g</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 食品多様性記録セクション -->
+            <div class="section-card">
+                <div class="section-header" onclick="toggleSection('plants')">
+                    <div class="section-title">食品多様性記録</div>
+                    <div class="section-toggle" id="plantsToggle">▼</div>
+                </div>
+                <div class="section-content" id="plantsContent">
+                    <div class="plant-input-container">
+                        <input type="text" class="plant-input" id="plantInput" placeholder="植物名を入力（例: トマト）">
+                        <button class="add-plant-btn" onclick="addPlant()">追加</button>
+                    </div>
+                    <div class="plants-list" id="plantsList">
+                        <!-- 動的に生成 -->
+                    </div>
+                    <div class="weekly-plants-list" id="weeklyPlantsList">
+                        <!-- 動的に生成される今週の植物一覧 -->
+                    </div>
+                    <div class="diversity-progress">
+                        <div>今週の植物種類: <span id="weeklyPlantCount">0</span> / 30種類</div>
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" id="weeklyPlantProgress" style="width: 0%"></div>
+                        </div>
+                        <small>目標: 週30種類</small>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- ボトムナビゲーション -->
+        <nav class="bottom-nav">
+            <div class="nav-item active" onclick="showPage('main')">
+                <div class="nav-icon">📝</div>
+                <div class="nav-label">記録</div>
+            </div>
+            <div class="nav-item" onclick="showPage('weekly')">
+                <div class="nav-icon">📊</div>
+                <div class="nav-label">週次</div>
+            </div>
+            <div class="nav-item" onclick="showPage('monthly')">
+                <div class="nav-icon">📈</div>
+                <div class="nav-label">月次</div>
+            </div>
+        </nav>
+    </div>
+
+
+    <script>
+        // グローバル変数
+        let currentDate = new Date();
+        let appData = {};
+        let settings = {
+            gender: 'female',
+            fiberGoal: 18,
+            notifications: true
+        };
+        let currentPage = 'main';
+
+        // 発酵食品の選択肢
+        const fermentedOptions = [
+            '納豆', 'ヨーグルト', '味噌（味噌汁含む）', 
+            'キムチ・漬物', 'チーズ', '甘酒・塩麹'
+        ];
+
+        // 食物繊維カテゴリ
+        const fiberCategories = [
+            { name: '生野菜サラダ', value: 3 },
+            { name: '温野菜・煮物', value: 5 },
+            { name: '野菜スープ・味噌汁', value: 2 },
+            { name: '海藻類', value: 1 },
+            { name: '玄米・雑穀米', value: 3 },
+            { name: '納豆', value: 3 },
+            { name: 'きのこ類', value: 2 },
+            { name: '果物', value: 2 }
+        ];
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            loadSettings();
+            initializeApp();
+            setupEventListeners();
+        });
+
+        // データ読み込み
+        function loadData() {
+            try {
+                const savedData = localStorage.getItem('pmcAppData');
+                if (savedData) {
+                    appData = JSON.parse(savedData);
+                }
+            } catch (error) {
+                console.error('データの読み込みに失敗しました:', error);
+                showMessage('データの読み込みに失敗しました', 'error');
+            }
+        }
+
+        // 設定読み込み
+        function loadSettings() {
+            try {
+                const savedSettings = localStorage.getItem('pmcAppSettings');
+                if (savedSettings) {
+                    settings = { ...settings, ...JSON.parse(savedSettings) };
+                }
+            } catch (error) {
+                console.error('設定の読み込みに失敗しました:', error);
+            }
+        }
+
+        // データ保存
+        function saveData() {
+            try {
+                localStorage.setItem('pmcAppData', JSON.stringify(appData));
+            } catch (error) {
+                console.error('データの保存に失敗しました:', error);
+                showMessage('データの保存に失敗しました', 'error');
+            }
+        }
+
+        // 設定保存
+        function saveSettings() {
+            try {
+                localStorage.setItem('pmcAppSettings', JSON.stringify(settings));
+            } catch (error) {
+                console.error('設定の保存に失敗しました:', error);
+                showMessage('設定の保存に失敗しました', 'error');
+            }
+        }
+
+        // アプリ初期化
+        function initializeApp() {
+            updateDateDisplay();
+            initializeFermentedOptions();
+            initializeFiberCategories();
+            updateSummary();
+            loadCurrentDayData();
+        }
+
+        // イベントリスナー設定
+        function setupEventListeners() {
+            // 植物入力でEnterキー対応
+            document.getElementById('plantInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addPlant();
+                }
+            });
+
+            // PWA対応
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('data:text/javascript,console.log("PWA Service Worker")');
+            }
+        }
+
+        // 日付表示更新
+        function updateDateDisplay() {
+            const dateStr = formatDate(currentDate);
+            document.getElementById('currentDate').textContent = dateStr;
+        }
+
+        // 日付変更
+        function changeDate(days) {
+            currentDate.setDate(currentDate.getDate() + days);
+            updateDateDisplay();
+            loadCurrentDayData();
+            updateSummary();
+        }
+
+        // 日付フォーマット
+        function formatDate(date) {
+            return date.toLocaleDateString('ja-JP', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            });
+        }
+
+        // 日付キー取得
+        function getDateKey(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        // 現在の日付データ読み込み
+        function loadCurrentDayData() {
+            const dateKey = getDateKey(currentDate);
+            const dayData = appData[dateKey] || {
+                fermented: [],
+                fiber: 0,
+                fiberDetail: {},
+                plants: []
+            };
+            
+            updateFermentedDisplay(dayData.fermented);
+            updateFiberDisplay(dayData.fiber, dayData.fiberDetail);
+            updatePlantsDisplay(dayData.plants);
+        }
+
+        // 発酵食品オプション初期化
+        function initializeFermentedOptions() {
+            const container = document.getElementById('fermentedOptions');
+            container.innerHTML = '';
+            
+            fermentedOptions.forEach(option => {
+                const div = document.createElement('div');
+                div.className = 'fermented-option';
+                div.onclick = () => toggleFermented(option);
+                
+                div.innerHTML = `
+                    <input type="checkbox" class="fermented-checkbox" id="fermented_${option}">
+                    <label class="fermented-label" for="fermented_${option}">${option}</label>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // 発酵食品選択切り替え
+        function toggleFermented(option) {
+            const dateKey = getDateKey(currentDate);
+            if (!appData[dateKey]) {
+                appData[dateKey] = { fermented: [], fiber: 0, fiberDetail: {}, plants: [] };
+            }
+            
+            const fermented = appData[dateKey].fermented;
+            const index = fermented.indexOf(option);
+            
+            if (index > -1) {
+                fermented.splice(index, 1);
+            } else {
+                fermented.push(option);
+            }
+            
+            updateFermentedDisplay(fermented);
+            saveData();
+            updateSummary();
+        }
+
+        // 発酵食品表示更新
+        function updateFermentedDisplay(selected) {
+            fermentedOptions.forEach(option => {
+                const checkbox = document.getElementById(`fermented_${option}`);
+                const optionDiv = checkbox.closest('.fermented-option');
+                
+                if (selected.includes(option)) {
+                    checkbox.checked = true;
+                    optionDiv.classList.add('selected');
+                } else {
+                    checkbox.checked = false;
+                    optionDiv.classList.remove('selected');
+                }
+            });
+            
+            document.getElementById('fermentedSelected').textContent = selected.length;
+        }
+
+        // 食物繊維カテゴリ初期化
+        function initializeFiberCategories() {
+            const container = document.getElementById('fiberCategories');
+            container.innerHTML = '';
+            
+            fiberCategories.forEach(category => {
+                const div = document.createElement('div');
+                div.className = 'fiber-category';
+                div.onclick = () => addFiber(category.name, category.value);
+                
+                div.innerHTML = `
+                    <div class="fiber-category-name">${category.name}</div>
+                    <div class="fiber-category-value">+${category.value}g</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // 食物繊維追加
+        function addFiber(categoryName, value) {
+            const dateKey = getDateKey(currentDate);
+            if (!appData[dateKey]) {
+                appData[dateKey] = { fermented: [], fiber: 0, fiberDetail: {}, plants: [] };
+            }
+            
+            const dayData = appData[dateKey];
+            dayData.fiber += value;
+            dayData.fiberDetail[categoryName] = (dayData.fiberDetail[categoryName] || 0) + 1;
+            
+            updateFiberDisplay(dayData.fiber, dayData.fiberDetail);
+            saveData();
+            updateSummary();
+            
+            // 成功メッセージ
+            showMessage(`${categoryName}を追加しました (+${value}g)`, 'success');
+        }
+
+        // 食物繊維表示更新
+        function updateFiberDisplay(total, detail) {
+            document.getElementById('fiberTotal').textContent = total;
+            document.getElementById('fiberGoal').textContent = settings.fiberGoal;
+            
+            const remaining = Math.max(0, settings.fiberGoal - total);
+            document.getElementById('fiberRemaining').textContent = remaining;
+            
+            const progress = Math.min(100, (total / settings.fiberGoal) * 100);
+            document.getElementById('fiberProgressBar').style.width = progress + '%';
+            
+            // 詳細記録の表示更新
+            updateFiberDetails(detail);
+        }
+        
+        // 食物繊維詳細表示更新
+        function updateFiberDetails(detail) {
+            const container = document.getElementById('fiberDetails');
+            container.innerHTML = '';
+            
+            // 記録がない場合は何も表示しない
+            if (Object.keys(detail).length === 0) {
+                return;
+            }
+            
+            // 各カテゴリの記録を表示
+            Object.entries(detail).forEach(([categoryName, count]) => {
+                if (count > 0) {
+                    const category = fiberCategories.find(cat => cat.name === categoryName);
+                    if (category) {
+                        const totalValue = category.value * count;
+                        const div = document.createElement('div');
+                        div.className = 'fiber-record-item';
+                        div.innerHTML = `
+                            <div class="fiber-record-info">
+                                <div class="fiber-record-name">${categoryName}</div>
+                                <div class="fiber-record-value">${count}回 × ${category.value}g = ${totalValue}g</div>
+                            </div>
+                            <button class="remove-fiber-btn" onclick="removeFiberRecord('${categoryName}')">削除</button>
+                        `;
+                        container.appendChild(div);
+                    }
+                }
+            });
+        }
+
+        // 植物追加
+        function addPlant() {
+            const input = document.getElementById('plantInput');
+            const plantName = input.value.trim();
+            
+            if (!plantName) {
+                showMessage('植物名を入力してください', 'error');
+                return;
+            }
+            
+            const dateKey = getDateKey(currentDate);
+            if (!appData[dateKey]) {
+                appData[dateKey] = { fermented: [], fiber: 0, fiberDetail: {}, plants: [] };
+            }
+            
+            const plants = appData[dateKey].plants;
+            if (plants.includes(plantName)) {
+                showMessage('この植物は今日既に記録されています', 'error');
+                return;
+            }
+            
+            // 今週既に登録されているかチェック
+            const weekPlants = getWeeklyPlants();
+            const isWeeklyDuplicate = weekPlants.includes(plantName);
+            
+            plants.push(plantName);
+            input.value = '';
+            
+            updatePlantsDisplay(plants);
+            saveData();
+            updateSummary();
+            
+            if (isWeeklyDuplicate) {
+                showMessage(`${plantName}を追加しました（今週2回目の登録です）`, 'success');
+            } else {
+                showMessage(`${plantName}を追加しました（今週初回登録）`, 'success');
+            }
+        }
+
+        // 食物繊維記録削除
+        function removeFiberRecord(categoryName) {
+            const dateKey = getDateKey(currentDate);
+            if (appData[dateKey] && appData[dateKey].fiberDetail[categoryName]) {
+                const dayData = appData[dateKey];
+                const category = fiberCategories.find(cat => cat.name === categoryName);
+                
+                if (category) {
+                    // 1回分の記録を削除
+                    dayData.fiberDetail[categoryName]--;
+                    dayData.fiber -= category.value;
+                    
+                    // カウントが0になったら削除
+                    if (dayData.fiberDetail[categoryName] <= 0) {
+                        delete dayData.fiberDetail[categoryName];
+                    }
+                    
+                    // 表示更新
+                    updateFiberDisplay(dayData.fiber, dayData.fiberDetail);
+                    saveData();
+                    updateSummary();
+                    
+                    showMessage(`${categoryName}の記録を削除しました (-${category.value}g)`, 'success');
+                }
+            }
+        }
+
+        // 植物削除
+        function removePlant(plantName) {
+            const dateKey = getDateKey(currentDate);
+            if (appData[dateKey]) {
+                const plants = appData[dateKey].plants;
+                const index = plants.indexOf(plantName);
+                if (index > -1) {
+                    plants.splice(index, 1);
+                    updatePlantsDisplay(plants);
+                    saveData();
+                    updateSummary();
+                }
+            }
+        }
+
+        // 植物表示更新
+        function updatePlantsDisplay(plants) {
+            const container = document.getElementById('plantsList');
+            container.innerHTML = '';
+            
+            plants.forEach(plant => {
+                const div = document.createElement('div');
+                div.className = 'plant-item';
+                div.innerHTML = `
+                    <span class="plant-name">${plant}</span>
+                    <button class="remove-plant-btn" onclick="removePlant('${plant}')">削除</button>
+                `;
+                container.appendChild(div);
+            });
+            
+            // 週次進捗更新
+            updateWeeklyProgress();
+        }
+
+        // 週次進捗更新
+        function updateWeeklyProgress() {
+            const weekPlants = getWeeklyPlants();
+            const uniquePlants = [...new Set(weekPlants)];
+            const count = uniquePlants.length;
+            
+            document.getElementById('weeklyPlantCount').textContent = count;
+            
+            const progress = Math.min(100, (count / 30) * 100);
+            document.getElementById('weeklyPlantProgress').style.width = progress + '%';
+            
+            // 今週の植物一覧を更新
+            updateWeeklyPlantsList(weekPlants, uniquePlants);
+        }
+        
+        // 今週の植物一覧表示更新
+        function updateWeeklyPlantsList(weekPlants, uniquePlants) {
+            const container = document.getElementById('weeklyPlantsList');
+            container.innerHTML = '';
+            
+            if (uniquePlants.length === 0) {
+                return;
+            }
+            
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'weekly-plants-title';
+            titleDiv.textContent = '今週登録済みの植物種類';
+            container.appendChild(titleDiv);
+            
+            const gridDiv = document.createElement('div');
+            gridDiv.className = 'weekly-plants-grid';
+            
+            // 植物の出現回数をカウント
+            const plantCounts = {};
+            weekPlants.forEach(plant => {
+                plantCounts[plant] = (plantCounts[plant] || 0) + 1;
+            });
+            
+            // ユニークな植物をアルファベット順にソート
+            uniquePlants.sort().forEach(plant => {
+                const plantTag = document.createElement('div');
+                plantTag.className = 'weekly-plant-tag';
+                
+                const count = plantCounts[plant];
+                if (count > 1) {
+                    plantTag.classList.add('duplicate');
+                    plantTag.textContent = `${plant} (${count}回)`;
+                } else {
+                    plantTag.textContent = plant;
+                }
+                
+                gridDiv.appendChild(plantTag);
+            });
+            
+            container.appendChild(gridDiv);
+        }
+
+        // 週次植物データ取得
+        function getWeeklyPlants() {
+            const today = new Date(currentDate);
+            const monday = new Date(today);
+            monday.setDate(today.getDate() - today.getDay() + 1);
+            
+            const weekPlants = [];
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(monday);
+                date.setDate(monday.getDate() + i);
+                const dateKey = getDateKey(date);
+                if (appData[dateKey] && appData[dateKey].plants) {
+                    weekPlants.push(...appData[dateKey].plants);
+                }
+            }
+            
+            return weekPlants;
+        }
+
+        // サマリー更新
+        function updateSummary() {
+            const dateKey = getDateKey(currentDate);
+            const dayData = appData[dateKey] || { fermented: [], fiber: 0, plants: [] };
+            
+            document.getElementById('fermentedCount').textContent = dayData.fermented.length;
+            document.getElementById('fiberCount').textContent = dayData.fiber + 'g';
+            document.getElementById('plantCount').textContent = dayData.plants.length;
+        }
+
+        // セクション切り替え
+        function toggleSection(sectionName) {
+            const content = document.getElementById(sectionName + 'Content');
+            const toggle = document.getElementById(sectionName + 'Toggle');
+            
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                toggle.classList.remove('collapsed');
+            } else {
+                content.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+            }
+        }
+
+        // ページ切り替え
+        function showPage(page) {
+            currentPage = page;
+            
+            // ナビゲーション更新
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.nav-item').classList.add('active');
+            
+            // コンテンツ更新
+            const mainContent = document.getElementById('mainContent');
+            
+            switch(page) {
+                case 'main':
+                    mainContent.innerHTML = getMainContent();
+                    initializeApp();
+                    break;
+                case 'weekly':
+                    mainContent.innerHTML = getWeeklyReport();
+                    loadWeeklyReport();
+                    break;
+                case 'monthly':
+                    mainContent.innerHTML = getMonthlyReport();
+                    loadMonthlyReport();
+                    break;
+            }
+        }
+
+        // メインコンテンツ取得
+        function getMainContent() {
+            return `
+                <!-- 発酵食品記録セクション -->
+                <div class="section-card">
+                    <div class="section-header" onclick="toggleSection('fermented')">
+                        <div class="section-title">発酵食品記録</div>
+                        <div class="section-toggle" id="fermentedToggle">▼</div>
+                    </div>
+                    <div class="section-content" id="fermentedContent">
+                        <div class="fermented-options" id="fermentedOptions">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <div class="fermented-summary" id="fermentedSummary">
+                            今日は <span id="fermentedSelected">0</span> 種類の発酵食品を食べました
+                            <br>
+                            <small>目標: 1日2種類以上</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 食物繊維記録セクション -->
+                <div class="section-card">
+                    <div class="section-header" onclick="toggleSection('fiber')">
+                        <div class="section-title">食物繊維記録</div>
+                        <div class="section-toggle" id="fiberToggle">▼</div>
+                    </div>
+                    <div class="section-content" id="fiberContent">
+                        <div class="fiber-categories" id="fiberCategories">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <div class="fiber-details" id="fiberDetails">
+                            <!-- 動的に生成される記録詳細 -->
+                        </div>
+                        <div class="fiber-summary" id="fiberSummary">
+                            <div>今日の食物繊維: <span id="fiberTotal">0</span>g / <span id="fiberGoal">18</span>g</div>
+                            <div class="fiber-progress">
+                                <div class="fiber-progress-bar" id="fiberProgressBar" style="width: 0%"></div>
+                            </div>
+                            <small>目標達成まで <span id="fiberRemaining">18</span>g</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 食品多様性記録セクション -->
+                <div class="section-card">
+                    <div class="section-header" onclick="toggleSection('plants')">
+                        <div class="section-title">食品多様性記録</div>
+                        <div class="section-toggle" id="plantsToggle">▼</div>
+                    </div>
+                    <div class="section-content" id="plantsContent">
+                        <div class="plant-input-container">
+                            <input type="text" class="plant-input" id="plantInput" placeholder="植物名を入力（例: トマト）">
+                            <button class="add-plant-btn" onclick="addPlant()">追加</button>
+                        </div>
+                        <div class="plants-list" id="plantsList">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <div class="weekly-plants-list" id="weeklyPlantsList">
+                            <!-- 動的に生成される今週の植物一覧 -->
+                        </div>
+                        <div class="diversity-progress">
+                            <div>今週の植物種類: <span id="weeklyPlantCount">0</span> / 30種類</div>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" id="weeklyPlantProgress" style="width: 0%"></div>
+                            </div>
+                            <small>目標: 週30種類</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 週次レポート取得
+        function getWeeklyReport() {
+            return `
+                <div class="report-section">
+                    <div class="report-title">週次レポート</div>
+                    <div class="chart-container">
+                        <canvas id="weeklyChart"></canvas>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="weeklyFermentedAvg">0</div>
+                            <div class="stat-label">発酵食品平均</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="weeklyFiberAvg">0g</div>
+                            <div class="stat-label">食物繊維平均</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="weeklyPlantTotal">0</div>
+                            <div class="stat-label">植物種類合計</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="weeklyRecordRate">0%</div>
+                            <div class="stat-label">記録率</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+
+        // 月次レポート取得
+        function getMonthlyReport() {
+            return `
+                <div class="report-section">
+                    <div class="report-title">月次レポート</div>
+                    <div class="chart-container">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="monthlyFermentedAvg">0</div>
+                            <div class="stat-label">発酵食品平均</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="monthlyFiberAvg">0g</div>
+                            <div class="stat-label">食物繊維平均</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="monthlyPlantTotal">0</div>
+                            <div class="stat-label">植物種類合計</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="monthlyRecordRate">0%</div>
+                            <div class="stat-label">記録率</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 週次レポート読み込み
+        function loadWeeklyReport() {
+            const weekData = getWeeklyData();
+            updateWeeklyStats(weekData);
+            createWeeklyChart(weekData);
+        }
+
+        // 月次レポート読み込み
+        function loadMonthlyReport() {
+            const monthData = getMonthlyData();
+            updateMonthlyStats(monthData);
+            createMonthlyChart(monthData);
+        }
+
+
+        // 週次データ取得
+        function getWeeklyData() {
+            const today = new Date(currentDate);
+            const monday = new Date(today);
+            monday.setDate(today.getDate() - today.getDay() + 1);
+            
+            const weekData = [];
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(monday);
+                date.setDate(monday.getDate() + i);
+                const dateKey = getDateKey(date);
+                const dayData = appData[dateKey] || { fermented: [], fiber: 0, plants: [] };
+                weekData.push({
+                    date: date,
+                    dateStr: date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' }),
+                    fermented: dayData.fermented.length,
+                    fiber: dayData.fiber,
+                    plants: dayData.plants.length
+                });
+            }
+            
+            return weekData;
+        }
+
+        // 月次データ取得
+        function getMonthlyData() {
+            const today = new Date(currentDate);
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            const monthData = [];
+            for (let i = 0; i < lastDay.getDate(); i++) {
+                const date = new Date(firstDay);
+                date.setDate(firstDay.getDate() + i);
+                const dateKey = getDateKey(date);
+                const dayData = appData[dateKey] || { fermented: [], fiber: 0, plants: [] };
+                monthData.push({
+                    date: date,
+                    dateStr: (i + 1).toString(),
+                    fermented: dayData.fermented.length,
+                    fiber: dayData.fiber,
+                    plants: dayData.plants.length
+                });
+            }
+            
+            return monthData;
+        }
+
+        // 週次統計更新
+        function updateWeeklyStats(weekData) {
+            const fermentedTotal = weekData.reduce((sum, day) => sum + day.fermented, 0);
+            const fiberTotal = weekData.reduce((sum, day) => sum + day.fiber, 0);
+            const plantTotal = weekData.reduce((sum, day) => sum + day.plants, 0);
+            const recordDays = weekData.filter(day => day.fermented > 0 || day.fiber > 0 || day.plants > 0).length;
+            
+            document.getElementById('weeklyFermentedAvg').textContent = (fermentedTotal / 7).toFixed(1);
+            document.getElementById('weeklyFiberAvg').textContent = (fiberTotal / 7).toFixed(1) + 'g';
+            document.getElementById('weeklyPlantTotal').textContent = plantTotal;
+            document.getElementById('weeklyRecordRate').textContent = Math.round((recordDays / 7) * 100) + '%';
+        }
+
+        // 月次統計更新
+        function updateMonthlyStats(monthData) {
+            const fermentedTotal = monthData.reduce((sum, day) => sum + day.fermented, 0);
+            const fiberTotal = monthData.reduce((sum, day) => sum + day.fiber, 0);
+            const plantTotal = monthData.reduce((sum, day) => sum + day.plants, 0);
+            const recordDays = monthData.filter(day => day.fermented > 0 || day.fiber > 0 || day.plants > 0).length;
+            const totalDays = monthData.length;
+            
+            document.getElementById('monthlyFermentedAvg').textContent = (fermentedTotal / totalDays).toFixed(1);
+            document.getElementById('monthlyFiberAvg').textContent = (fiberTotal / totalDays).toFixed(1) + 'g';
+            document.getElementById('monthlyPlantTotal').textContent = plantTotal;
+            document.getElementById('monthlyRecordRate').textContent = Math.round((recordDays / totalDays) * 100) + '%';
+        }
+
+        // 週次チャート作成
+        function createWeeklyChart(weekData) {
+            const canvas = document.getElementById('weeklyChart');
+            if (!canvas) return;
+            
+            // 既存のチャートインスタンスを破棄
+            if (window.weeklyChartInstance) {
+                window.weeklyChartInstance.destroy();
+            }
+            
+            const ctx = canvas.getContext('2d');
+            window.weeklyChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: weekData.map(day => day.dateStr),
+                    datasets: [
+                        {
+                            label: '発酵食品',
+                            data: weekData.map(day => day.fermented),
+                            borderColor: '#4CAF50',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: '食物繊維(g)',
+                            data: weekData.map(day => day.fiber),
+                            borderColor: '#FF9800',
+                            backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: '植物種類',
+                            data: weekData.map(day => day.plants),
+                            borderColor: '#2196F3',
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 月次チャート作成
+        function createMonthlyChart(monthData) {
+            const canvas = document.getElementById('monthlyChart');
+            if (!canvas) return;
+            
+            // 既存のチャートインスタンスを破棄
+            if (window.monthlyChartInstance) {
+                window.monthlyChartInstance.destroy();
+            }
+            
+            const ctx = canvas.getContext('2d');
+            window.monthlyChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: monthData.map(day => day.dateStr),
+                    datasets: [
+                        {
+                            label: '発酵食品',
+                            data: monthData.map(day => day.fermented),
+                            backgroundColor: 'rgba(76, 175, 80, 0.6)',
+                            borderColor: '#4CAF50',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '食物繊維(g)',
+                            data: monthData.map(day => day.fiber),
+                            backgroundColor: 'rgba(255, 152, 0, 0.6)',
+                            borderColor: '#FF9800',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '植物種類',
+                            data: monthData.map(day => day.plants),
+                            backgroundColor: 'rgba(33, 150, 243, 0.6)',
+                            borderColor: '#2196F3',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // メッセージ表示
+        function showMessage(message, type = 'info') {
+            // 既存のメッセージを削除
+            const existingMessage = document.querySelector('.success-message');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `success-message ${type}`;
+            messageDiv.textContent = message;
+            
+            if (type === 'error') {
+                messageDiv.style.background = '#f8d7da';
+                messageDiv.style.color = '#721c24';
+            }
+            
+            document.querySelector('.main-content').insertBefore(messageDiv, document.querySelector('.main-content').firstChild);
+            
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.remove();
+                }
+            }, 3000);
+        }
+
+
+
+
+        // チュートリアル表示
+        function showTutorial() {
+            if (!localStorage.getItem('pmcAppTutorialShown')) {
+                const tutorial = `
+                    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; display: flex; align-items: center; justify-content: center;">
+                        <div style="background: white; padding: 30px; border-radius: 15px; max-width: 400px; margin: 20px;">
+                            <h2 style="margin-bottom: 20px; color: #333;">アプリの使い方</h2>
+                            <div style="text-align: left; line-height: 1.6;">
+                                <p><strong>1. 発酵食品記録</strong><br>
+                                チェックボックスで食べた発酵食品を選択</p>
+                                <p><strong>2. 食物繊維記録</strong><br>
+                                カテゴリボタンをタップして食物繊維を追加</p>
+                                <p><strong>3. 食品多様性記録</strong><br>
+                                植物名を入力して週30種類を目指す</p>
+                                <p><strong>4. レポート</strong><br>
+                                週次・月次の進捗をグラフで確認</p>
+                            </div>
+                            <button onclick="closeTutorial()" style="background: #4CAF50; color: white; border: none; padding: 12px 24px; border-radius: 8px; margin-top: 20px; cursor: pointer; width: 100%;">
+                                始める
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', tutorial);
+            }
+        }
+
+        // チュートリアル閉じる
+        function closeTutorial() {
+            const tutorial = document.querySelector('[style*="z-index: 2000"]');
+            if (tutorial) {
+                tutorial.remove();
+                localStorage.setItem('pmcAppTutorialShown', 'true');
+            }
+        }
+
+        // 連続記録日数計算
+        function calculateStreak() {
+            let streak = 0;
+            const today = new Date();
+            
+            for (let i = 0; i < 365; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - i);
+                const dateKey = getDateKey(date);
+                const dayData = appData[dateKey];
+                
+                if (dayData && (dayData.fermented.length > 0 || dayData.fiber > 0 || dayData.plants.length > 0)) {
+                    streak++;
+                } else {
+                    break;
+                }
+            }
+            
+            return streak;
+        }
+
+        // 達成フィードバック
+        function checkAchievements() {
+            const dateKey = getDateKey(currentDate);
+            const dayData = appData[dateKey] || { fermented: [], fiber: 0, plants: [] };
+            
+            // 発酵食品目標達成
+            if (dayData.fermented.length >= 2) {
+                showMessage('🎉 発酵食品目標達成！素晴らしいです！', 'success');
+            }
+            
+            // 食物繊維目標達成
+            if (dayData.fiber >= settings.fiberGoal) {
+                showMessage('🎉 食物繊維目標達成！健康的ですね！', 'success');
+            }
+            
+            // 週次植物目標達成
+            const weekPlants = getWeeklyPlants();
+            const uniquePlants = [...new Set(weekPlants)];
+            if (uniquePlants.length >= 30) {
+                showMessage('🎉 週次植物多様性目標達成！素晴らしい多様性です！', 'success');
+            }
+        }
+
+        // パフォーマンス最適化：データの定期クリーンアップ
+        function cleanupOldData() {
+            const oneMonthAgo = new Date();
+            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+            
+            Object.keys(appData).forEach(dateKey => {
+                const date = new Date(dateKey);
+                if (date < oneMonthAgo) {
+                    delete appData[dateKey];
+                }
+            });
+            
+            saveData();
+        }
+
+        // エラーハンドリング強化
+        window.addEventListener('error', function(e) {
+            console.error('アプリエラー:', e.error);
+            showMessage('エラーが発生しました。ページを再読み込みしてください。', 'error');
+        });
+
+        // オフライン対応
+        window.addEventListener('online', function() {
+            showMessage('オンラインに復帰しました', 'success');
+        });
+
+        window.addEventListener('offline', function() {
+            showMessage('オフラインです。データはローカルに保存されます。', 'error');
+        });
+
+        // データリセット機能
+        function resetAllData() {
+            if (confirm('すべてのデータを削除してもよろしいですか？この操作は元に戻せません。')) {
+                // LocalStorageからデータを削除
+                localStorage.removeItem('pmcAppData');
+                localStorage.removeItem('pmcAppSettings');
+                localStorage.removeItem('pmcAppTutorialShown');
+                localStorage.removeItem('pmcAppLastCleanup');
+                
+                // アプリデータを初期化
+                appData = {};
+                settings = {
+                    gender: 'female',
+                    fiberGoal: 18,
+                    notifications: true
+                };
+                
+                // アプリを再初期化
+                initializeApp();
+                showMessage('すべてのデータをリセットしました', 'success');
+                
+                // メインページに戻る
+                showPage('main');
+            }
+        }
+
+        // 初期化完了
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            loadSettings();
+            initializeApp();
+            setupEventListeners();
+            showTutorial();
+            
+            // 月1回のデータクリーンアップ
+            const lastCleanup = localStorage.getItem('pmcAppLastCleanup');
+            const now = new Date();
+            if (!lastCleanup || (now - new Date(lastCleanup)) > 30 * 24 * 60 * 60 * 1000) {
+                cleanupOldData();
+                localStorage.setItem('pmcAppLastCleanup', now.toISOString());
+            }
+            
+            // データリセット用のキーボードショートカット（開発用）
+            // Ctrl+Shift+R でデータリセット
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+                    e.preventDefault();
+                    resetAllData();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
