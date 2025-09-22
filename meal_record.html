@@ -1124,7 +1124,10 @@
         function getWeeklyPlants() {
             const today = new Date(currentDate);
             const monday = new Date(today);
-            monday.setDate(today.getDate() - today.getDay() + 1);
+            
+            // 日曜日の場合の修正（0の場合は7にする）
+            const dayOfWeek = today.getDay() === 0 ? 7 : today.getDay();
+            monday.setDate(today.getDate() - dayOfWeek + 1);
             
             const weekPlants = [];
             for (let i = 0; i < 7; i++) {
@@ -1345,7 +1348,10 @@
         function getWeeklyData() {
             const today = new Date(currentDate);
             const monday = new Date(today);
-            monday.setDate(today.getDate() - today.getDay() + 1);
+            
+            // 日曜日の場合の修正（0の場合は7にする）
+            const dayOfWeek = today.getDay() === 0 ? 7 : today.getDay();
+            monday.setDate(today.getDate() - dayOfWeek + 1);
             
             const weekData = [];
             for (let i = 0; i < 7; i++) {
