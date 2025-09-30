@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#8B5CF6">
+    <title>お通じ記録</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* カスタムスタイル */
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .calendar-cell {
+            aspect-ratio: 1;
+            min-height: 60px;
+        }
+        
+        .record-btn.selected {
+            background-color: #E9D5FF !important;
+            border-color: #8B5CF6 !important;
+            border-width: 3px !important;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2) !important;
+            transform: scale(1.02);
+        }
+        
+        .color-chip {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .color-chip.selected {
+            border: 4px solid #8B5CF6 !important;
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.3) !important;
+            transform: scale(1.15);
+        }
+        
+        .color-btn.selected {
+            background-color: #E9D5FF !important;
+            border-radius: 8px;
+        }
+        
+        /* モーダルアニメーション */
+        .modal-backdrop {
+            backdrop-filter: blur(2px);
+        }
+        
+        /* スムーズスクロール */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* SVGアイコンスタイル */
+        .bristol-icon {
+            width: 40px;
+            height: 40px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg">
+        
+        <!-- レポート画面 -->
+        <div id="reportScreen" class="hidden">
+            <!-- ヘッダー -->
+            <div class="bg-gradient-to-r from-purple-500 to-indigo-600 text-white p-4 sticky top-0 z-10 shadow-md">
+                <div class="flex items-center justify-between mb-2">
+                    <button id="prevMonth" class="p-2 hover:bg-white/20 rounded-lg transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <h1 id="currentMonth" class="text-xl font-bold">2025年9月</h1>
+                    <button id="nextMonth" class="p-2 hover:bg-white/20 rounded-lg transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-sm text-purple-100 text-center">お通じカレンダー</p>
+            </div>
+
+            <!-- カレンダー -->
+            <div class="p-4">
+                <!-- 曜日ヘッダー -->
+                <div class="grid grid-cols-7 gap-1 mb-2">
+                    <div class="text-center text-sm font-semibold text-red-500 py-2">日</div>
+                    <div class="text-center text-sm font-semibold text-gray-600 py-2">月</div>
+                    <div class="text-center text-sm font-semibold text-gray-600 py-2">火</div>
+                    <div class="text-center text-sm font-semibold text-gray-600 py-2">水</div>
+                    <div class="text-center text-sm font-semibold text-gray-600 py-2">木</div>
+                    <div class="text-center text-sm font-semibold text-gray-600 py-2">金</div>
+                    <div class="text-center text-sm font-semibold text-blue-500 py-2">土</div>
+                </div>
+                
+                <!-- カレンダーグリッド -->
+                <div id="calendar" class="grid grid-cols-7 gap-1">
+                    <!-- JavaScriptで生成 -->
+                </div>
+            </div>
+
+            <!-- フッター：記録ボタン -->
+            <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg max-w-md mx-auto z-20">
+                <button id="addRecordBtn" class="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2 active:scale-95">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    記録する
+                </button>
+            </div>
+        </div>
+
+        <!-- 記録画面 -->
+        <div id="recordScreen" class="hidden">
+            <!-- ヘッダー -->
+            <div class="bg-gradient-to-r from-purple-500 to-indigo-600 text-white p-4 sticky top-0 z-10 shadow-md">
+                <div class="flex items-center gap-3">
+                    <button id="backBtn" class="p-2 hover:bg-white/20 rounded-lg transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <h1 class="text-xl font-bold">記録</h1>
+                </div>
+            </div>
+
+            <!-- 記録フォーム -->
+            <div class="p-4 pb-32 space-y-6">
+                
+                <!-- 日時選択 -->
+                <div class="bg-white rounded-xl shadow-md p-4">
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">📅 日時</h2>
+                    <p class="text-sm text-gray-600 mb-4">日付や時間をタップして変更できます</p>
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <label class="block text-xs text-gray-500 mb-1">日付</label>
+                            <input type="date" id="dateInput" class="w-full border-2 border-gray-200 rounded-lg p-3 text-sm focus:border-purple-500 focus:outline-none transition cursor-pointer">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs text-gray-500 mb-1">時刻</label>
+                            <input type="time" id="timeInput" class="w-full border-2 border-gray-200 rounded-lg p-3 text-sm focus:border-purple-500 focus:outline-none transition cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ブリストルスケール -->
+                <div class="bg-white rounded-xl shadow-md p-4">
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">💩 ブリストルスケール</h2>
+                    <p class="text-sm text-gray-600 mb-4">便の形状を選択してください</p>
+                    <div class="grid grid-cols-4 gap-2">
+                        <!-- タイプ1-7 + 出なかった -->
+                        <button type="button" class="record-btn bristol-btn border-2 border-gray-200 rounded-lg p-3 text-center hover:border-purple-300 transition" data-value="1">
+                            <div class="bristol-icon mx-auto mb-1">
+                                <svg viewBox="0 0 40 40" fill="none">
+                                    <circle cx="10" cy="10" r="3" fill="#8B4513"/>
+                                    <circle cx="18" cy="10" r="3" fill="#8B4513"/>
+                                    <circle cx="26" cy="10" r="3" fill="#8B4513"/>
+                                    <circle cx="10" cy="20" r="3" fill="#8B4513"/>
+                                    <circle cx="18" cy="20" r="3" fill="#8B4513"/>
+                                </svg>
+                            </div>
+                            <div class="text-xs font-medium">タイプ1</div>
+                            <div class="text-xs text-gray-500">硬い塊</div>
+                        </button>
+                        
+                        <button type="button" class="record-btn bristol-btn border-2 border-gray-200 rounded-lg p-3 text-center hover:border-purple-300 transition" data-value="2">
+                            <div class="bristol-icon mx-auto mb-1">
+                                <svg viewBox="0 0 40 40" fill="none">
+                                    <ellipse cx="20" cy="20" rx="15" ry="6" fill="#8B4513"/>
+                                    <line x1="12" y1="20" x2="28" y2="20" stroke="#654321" stroke-width="1"/>
+                                </svg>
+                            </div>
+                            <div class="text-xs font-medium">タイプ2</div>
+                            <div class="text-xs text-gray-500">ゴツゴツ</div>
+                        </button>
+                        
+                        <button type="button" class="record-btn bristol-btn border-2 border-gray-200 rounded-lg p-3 text-center hover:border-purple-300 transition" data-value="3">
+                            <div class="bristol-icon mx-auto mb-1">
+                                <svg viewBox="0 0 40 40" fill="none">
+                                    <rect x="10" y="16" width="20" height="8" rx="4" fill="#A0522D"/>
+                                    <line x1="15" y1="16" x2="15" y2="24" stroke="#654321" stroke-width="0.5"/>
+                                    <line x1="25" y1="16" x2="25" y2="24" stroke="#654321" stroke-width="0.5"/>
+                                </svg>
+                            </div>
+                            <div class="text-xs font-medium">タイプ3</div>
+                            <div class="text-xs text-gray-500">ひび割れ</div>
+                        </button>
+                        
+                        <button type="button" class="record-btn bristol-btn border-2 border-gray-200 rounded-lg p-3 text-center hover:border-purple-300 transition" data-value="4">
+                            <div class="bristol-icon mx-auto mb-1">
+                                <svg viewBox="0 0 40 40" fill="none">
+                                    <rect x="10" y="16" width="20" height="8" rx="4" fill="#CD853F"/>
+                                </svg>
+                            </div>
+                            <div class="text-xs font-medium">タイプ4</div>
+                            <div class="text-xs text-gray-500">なめらか</div>
+                        </button>
+                        
+                        <button type="button" class="record-btn bristol-btn border-2 border-gray-200 rounded-lg p-3 text-center hover:border-purple-300 transition" data-value="5">
+                            <div class="bristol-icon mx-auto mb-1">
+                                <svg viewBox="0 0 40 40" fill="none">
+                                    <circle cx="15" cy="20" r="5" fill="#DEB887"/>
+                                    <circle cx="25" cy="18" r="4" fill="#DEB887"/>
+                                    <circle cx="22" cy="24" r="3" fill="#DEB887"/>
+                                </svg>
+                            </div>
+                            <div class="text-xs font-medium">タイプ5</div>
+                            <div class="text-xs text-gray-500">柔らか塊</div>
+                        </button>
+                        
+                        <button type="button" class="record-btn bristol-btn border-2 border-gray-200 rounded-lg p-3 text-center hover:border-purple-300 transition" data-value="6">
+                            <div class="bristol-icon mx-auto mb-1">
+                                <svg viewBox="0 0 40 40" fill="none">
+                                    <circle cx="12" cy="18" r="3" fill="#F4A460"/>
+                                    <circle cx="20" cy="20" r="2.5" fill="#F4A460"/>
+                                    <circle cx="28" cy="19" r="3" fill="#F4A460"/>
+                                    <circle cx="16" cy="24" r="2" fill="#F4A460"/>
+                                    <circle cx="24" cy="25" r="2" fill="#F4A460"/>
+                                </svg>
+                            </div>
+                            <div class="text-xs font-medium">タイプ6</div>
+                            <div class="text-xs text-gray-500">断片</div>
+                        </button>
+                        
+                        <button type="button" class="record-btn bristol-btn border-2 border-gray-200 rounded-lg p-3 text-center hover:border-purple-300 transition" data-value="7">
+                            <div class="bristol-icon mx-auto mb-1">
+                                <svg viewBox="0 0 40 40" fill="none">
+                                    <path d="M10 20 Q15 15, 20 20 T30 20" stroke="#DAA520" stroke-width="3" fill="none"/>
+                                    <circle cx="12" cy="22" r="1" fill="#DAA520" opacity="0.6"/>
+                                    <circle cx="18" cy="24" r="1" fill="#DAA520" opacity="0.6"/>
+                                    <circle cx="25" cy="22" r="1" fill="#DAA520" opacity="0.6"/>
+                                </svg>
+                            </div>
+                            <div class="text-xs font-medium">タイプ7</div>
+                            <div class="text-xs text-gray-500">液体</div>
+                        </button>
+                        
+                        <button type="button" class="record-btn bristol-btn border-2 border-gray-200 rounded-lg p-3 text-center hover:border-purple-300 transition" data-value="8">
+                            <div class="bristol-icon mx-auto mb-1">
+                                <svg viewBox="0 0 40 40" fill="none">
+                                    <circle cx="20" cy="20" r="15" stroke="#EF4444" stroke-width="3" fill="none"/>
+                                    <line x1="12" y1="12" x2="28" y2="28" stroke="#EF4444" stroke-width="3"/>
+                                </svg>
+                            </div>
+                            <div class="text-xs font-medium">出なかった</div>
+                            <div class="text-xs text-gray-500 invisible">-</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 量 -->
+                <div class="bg-white rounded-xl shadow-md p-4">
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">📏 量</h2>
+                    <p class="text-sm text-gray-600 mb-4">5段階で評価してください</p>
+                    <div class="space-y-2">
+                        <button type="button" class="record-btn amount-btn w-full border-2 border-gray-200 rounded-lg p-3 text-left hover:border-purple-300 transition flex items-center gap-3" data-value="1">
+                            <div class="text-3xl flex-shrink-0">🍓</div>
+                            <div class="flex-1">
+                                <div class="font-bold text-sm">1: ごく少量</div>
+                                <div class="text-xs text-gray-500">～50g、いちご1個分</div>
+                            </div>
+                        </button>
+                        <button type="button" class="record-btn amount-btn w-full border-2 border-gray-200 rounded-lg p-3 text-left hover:border-purple-300 transition flex items-center gap-3" data-value="2">
+                            <div class="text-3xl flex-shrink-0">🍊</div>
+                            <div class="flex-1">
+                                <div class="font-bold text-sm">2: 少量</div>
+                                <div class="text-xs text-gray-500">50g～100g、みかん1個分</div>
+                            </div>
+                        </button>
+                        <button type="button" class="record-btn amount-btn w-full border-2 border-gray-200 rounded-lg p-3 text-left hover:border-purple-300 transition flex items-center gap-3" data-value="3">
+                            <div class="text-3xl flex-shrink-0">🍌</div>
+                            <div class="flex-1">
+                                <div class="font-bold text-sm">3: 普通</div>
+                                <div class="text-xs text-gray-500">100g～200g、バナナ1本分</div>
+                            </div>
+                        </button>
+                        <button type="button" class="record-btn amount-btn w-full border-2 border-gray-200 rounded-lg p-3 text-left hover:border-purple-300 transition flex items-center gap-3" data-value="4">
+                            <div class="text-3xl flex-shrink-0">🍎</div>
+                            <div class="flex-1">
+                                <div class="font-bold text-sm">4: 多め</div>
+                                <div class="text-xs text-gray-500">200g～300g、りんご1個分</div>
+                            </div>
+                        </button>
+                        <button type="button" class="record-btn amount-btn w-full border-2 border-gray-200 rounded-lg p-3 text-left hover:border-purple-300 transition flex items-center gap-3" data-value="5">
+                            <div class="text-3xl flex-shrink-0">🍌🍌</div>
+                            <div class="flex-1">
+                                <div class="font-bold text-sm">5: とても多い</div>
+                                <div class="text-xs text-gray-500">300g～、バナナ2本分</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- におい -->
+                <div class="bg-white rounded-xl shadow-md p-4">
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">👃 におい</h2>
+                    <p class="text-sm text-gray-600 mb-4">3段階で評価してください</p>
+                    <div class="flex gap-3">
+                        <button type="button" class="record-btn smell-btn flex-1 border-2 border-gray-200 rounded-lg p-4 text-center hover:border-purple-300 transition" data-value="1">
+                            <div class="text-3xl mb-2">😊</div>
+                            <div class="text-sm font-medium">1</div>
+                            <div class="text-xs text-gray-500">くさくない</div>
+                        </button>
+                        <button type="button" class="record-btn smell-btn flex-1 border-2 border-gray-200 rounded-lg p-4 text-center hover:border-purple-300 transition" data-value="2">
+                            <div class="text-3xl mb-2">😐</div>
+                            <div class="text-sm font-medium">2</div>
+                            <div class="text-xs text-gray-500">くさい</div>
+                        </button>
+                        <button type="button" class="record-btn smell-btn flex-1 border-2 border-gray-200 rounded-lg p-4 text-center hover:border-purple-300 transition" data-value="3">
+                            <div class="text-3xl mb-2">😷</div>
+                            <div class="text-sm font-medium">3</div>
+                            <div class="text-xs text-gray-500">とてもくさい</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 色 -->
+                <div class="bg-white rounded-xl shadow-md p-4">
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">🎨 色</h2>
+                    <p class="text-sm text-gray-600 mb-4">便の色を選択してください</p>
+                    <div class="grid grid-cols-3 gap-3">
+                        <button type="button" class="record-btn color-btn flex flex-col items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition" data-value="1">
+                            <div class="color-chip" style="background-color: #E5E7EB;"></div>
+                            <div class="text-xs text-center">
+                                <div class="font-medium">白〜灰色</div>
+                            </div>
+                        </button>
+                        <button type="button" class="record-btn color-btn flex flex-col items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition" data-value="2">
+                            <div class="color-chip" style="background-color: #FEF3C7;"></div>
+                            <div class="text-xs text-center">
+                                <div class="font-medium">薄い黄色</div>
+                            </div>
+                        </button>
+                        <button type="button" class="record-btn color-btn flex flex-col items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition" data-value="3">
+                            <div class="color-chip" style="background-color: #FDE047;"></div>
+                            <div class="text-xs text-center">
+                                <div class="font-medium">黄色</div>
+                            </div>
+                        </button>
+                        <button type="button" class="record-btn color-btn flex flex-col items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition" data-value="4">
+                            <div class="color-chip" style="background-color: #D97706;"></div>
+                            <div class="text-xs text-center">
+                                <div class="font-medium">黄土色</div>
+                            </div>
+                        </button>
+                        <button type="button" class="record-btn color-btn flex flex-col items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition" data-value="5">
+                            <div class="color-chip" style="background-color: #92400E;"></div>
+                            <div class="text-xs text-center">
+                                <div class="font-medium">茶色</div>
+                            </div>
+                        </button>
+                        <button type="button" class="record-btn color-btn flex flex-col items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition" data-value="6">
+                            <div class="color-chip" style="background-color: #451A03;"></div>
+                            <div class="text-xs text-center">
+                                <div class="font-medium">焦げ茶色</div>
+                            </div>
+                        </button>
+                        <button type="button" class="record-btn color-btn flex flex-col items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition" data-value="7">
+                            <div class="color-chip" style="background-color: #10B981;"></div>
+                            <div class="text-xs text-center">
+                                <div class="font-medium">緑色</div>
+                            </div>
+                        </button>
+                        <button type="button" class="record-btn color-btn flex flex-col items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition" data-value="8">
+                            <div class="color-chip" style="background-color: #DC2626;"></div>
+                            <div class="text-xs text-center">
+                                <div class="font-medium text-red-600">赤色⚠️</div>
+                            </div>
+                        </button>
+                        <button type="button" class="record-btn color-btn flex flex-col items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition" data-value="9">
+                            <div class="color-chip" style="background-color: #000000;"></div>
+                            <div class="text-xs text-center">
+                                <div class="font-medium text-red-600">黒色⚠️</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- すっきり感 -->
+                <div class="bg-white rounded-xl shadow-md p-4">
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">✨ すっきり感</h2>
+                    <p class="text-sm text-gray-600 mb-4">5段階で評価してください</p>
+                    <div class="flex gap-2">
+                        <button type="button" class="record-btn relief-btn flex-1 border-2 border-gray-200 rounded-lg p-3 text-center hover:border-purple-300 transition" data-value="1">
+                            <div class="text-2xl mb-1">😄</div>
+                            <div class="text-xs font-medium">1</div>
+                            <div class="text-xs text-gray-500">とてもスッキリ</div>
+                        </button>
+                        <button type="button" class="record-btn relief-btn flex-1 border-2 border-gray-200 rounded-lg p-3 text-center hover:border-purple-300 transition" data-value="2">
+                            <div class="text-2xl mb-1">🙂</div>
+                            <div class="text-xs font-medium">2</div>
+                            <div class="text-xs text-gray-500">ややスッキリ</div>
+                        </button>
+                        <button type="button" class="record-btn relief-btn flex-1 border-2 border-gray-200 rounded-lg p-3 text-center hover:border-purple-300 transition" data-value="3">
+                            <div class="text-2xl mb-1">😐</div>
+                            <div class="text-xs font-medium">3</div>
+                            <div class="text-xs text-gray-500">ふつう</div>
+                        </button>
+                        <button type="button" class="record-btn relief-btn flex-1 border-2 border-gray-200 rounded-lg p-3 text-center hover:border-purple-300 transition" data-value="4">
+                            <div class="text-2xl mb-1">😕</div>
+                            <div class="text-xs font-medium">4</div>
+                            <div class="text-xs text-gray-500">やや残ってる</div>
+                        </button>
+                        <button type="button" class="record-btn relief-btn flex-1 border-2 border-gray-200 rounded-lg p-3 text-center hover:border-purple-300 transition" data-value="5">
+                            <div class="text-2xl mb-1">😣</div>
+                            <div class="text-xs font-medium">5</div>
+                            <div class="text-xs text-gray-500">残ってる</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- メモ -->
+                <div class="bg-white rounded-xl shadow-md p-4">
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">📝 メモ</h2>
+                    <textarea id="memoInput" class="w-full border-2 border-gray-200 rounded-lg p-3 text-sm focus:border-purple-500 focus:outline-none transition" rows="4" placeholder="気になることがあればメモしてください（任意）"></textarea>
+                </div>
+            </div>
+
+            <!-- フッター：保存ボタン -->
+            <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg max-w-md mx-auto z-20">
+                <button id="saveBtn" class="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition active:scale-95">
+                    保存する
+                </button>
+            </div>
+        </div>
+
+        <!-- 詳細モーダル -->
+        <div id="detailModal" class="fixed inset-0 bg-black/50 modal-backdrop hidden items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+                <div class="sticky top-0 bg-gradient-to-r from-purple-500 to-indigo-600 text-white p-4 rounded-t-2xl">
+                    <div class="flex items-center justify-between">
+                        <h2 id="modalDate" class="text-xl font-bold">2025年9月30日</h2>
+                        <button id="closeModal" class="p-2 hover:bg-white/20 rounded-lg transition">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="modalContent" class="p-4 space-y-4">
+                    <!-- JavaScriptで生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // データ管理
+        // ========================================
+        const STORAGE_KEY = 'stool_records';
+        let records = [];
+
+        // ローカルストレージからデータを読み込み
+        function loadRecords() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    records = JSON.parse(saved);
+                } catch (e) {
+                    console.error('Failed to load records:', e);
+                    records = [];
+                }
+            }
+        }
+
+        // ローカルストレージにデータを保存
+        function saveRecords() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+        }
+
+        // ========================================
+        // 画面遷移
+        // ========================================
+        const reportScreen = document.getElementById('reportScreen');
+        const recordScreen = document.getElementById('recordScreen');
+
+        function showReportScreen() {
+            reportScreen.classList.remove('hidden');
+            recordScreen.classList.add('hidden');
+            renderCalendar();
+        }
+
+        function showRecordScreen(date = null) {
+            reportScreen.classList.add('hidden');
+            recordScreen.classList.remove('hidden');
+            
+            if (!editingRecordId) {
+                resetForm();
+                
+                // 日付と時刻を設定
+                if (date) {
+                    selectedDate = date;
+                    document.getElementById('dateInput').value = date;
+                } else {
+                    const now = new Date();
+                    selectedDate = formatDate(now);
+                    document.getElementById('dateInput').value = selectedDate;
+                }
+                
+                if (!selectedTime) {
+                    const now = new Date();
+                    selectedTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                }
+                document.getElementById('timeInput').value = selectedTime;
+            }
+        }
+        
+        // 編集モードで記録画面を開く
+        function showRecordScreenForEdit(record) {
+            editingRecordId = record.id;
+            
+            // フォームに既存データを設定
+            formData = {
+                bristol: record.bristol,
+                amount: record.amount,
+                smell: record.smell,
+                color: record.color,
+                relief: record.relief,
+                memo: record.memo
+            };
+            
+            // 日付と時刻を設定
+            selectedDate = record.date;
+            selectedTime = record.time;
+            document.getElementById('dateInput').value = record.date;
+            document.getElementById('timeInput').value = record.time;
+            
+            // ボタンの選択状態を復元
+            document.querySelectorAll('.bristol-btn').forEach(btn => {
+                if (parseInt(btn.dataset.value) === record.bristol) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+            
+            document.querySelectorAll('.amount-btn').forEach(btn => {
+                if (parseInt(btn.dataset.value) === record.amount) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+            
+            document.querySelectorAll('.smell-btn').forEach(btn => {
+                if (parseInt(btn.dataset.value) === record.smell) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+            
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                if (parseInt(btn.dataset.value) === record.color) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+            
+            document.querySelectorAll('.relief-btn').forEach(btn => {
+                if (parseInt(btn.dataset.value) === record.relief) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+            
+            document.getElementById('memoInput').value = record.memo;
+            
+            // 保存ボタンのテキストを変更
+            document.getElementById('saveBtn').textContent = '更新する';
+            
+            closeDetailModal();
+            reportScreen.classList.add('hidden');
+            recordScreen.classList.remove('hidden');
+        }
+
+        // ========================================
+        // カレンダー表示
+        // ========================================
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth(); // 0-11
+
+        function renderCalendar() {
+            const calendar = document.getElementById('calendar');
+            const currentMonthTitle = document.getElementById('currentMonth');
+            
+            // 月のタイトル更新
+            currentMonthTitle.textContent = `${currentYear}年${currentMonth + 1}月`;
+            
+            // カレンダーをクリア
+            calendar.innerHTML = '';
+            
+            // 月の最初の日と最後の日
+            const firstDay = new Date(currentYear, currentMonth, 1);
+            const lastDay = new Date(currentYear, currentMonth + 1, 0);
+            const firstDayOfWeek = firstDay.getDay(); // 0-6
+            const daysInMonth = lastDay.getDate();
+            
+            // 空白セルを追加
+            for (let i = 0; i < firstDayOfWeek; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'calendar-cell';
+                calendar.appendChild(emptyCell);
+            }
+            
+            // 日付セルを追加
+            for (let day = 1; day <= daysInMonth; day++) {
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell border border-gray-200 rounded-lg p-1 cursor-pointer hover:bg-purple-50 transition flex flex-col items-center justify-center text-center';
+                
+                const dateStr = formatDate(new Date(currentYear, currentMonth, day));
+                const dayRecords = records.filter(r => r.date === dateStr);
+                
+                // 日付番号
+                const dateNum = document.createElement('div');
+                dateNum.className = 'text-xs font-semibold text-gray-600 mb-1';
+                dateNum.textContent = day;
+                cell.appendChild(dateNum);
+                
+                // 記録がある場合
+                if (dayRecords.length > 0) {
+                    const { emoji, count } = calculateDaySummary(dayRecords);
+                    
+                    const emojiDiv = document.createElement('div');
+                    emojiDiv.className = 'text-2xl';
+                    emojiDiv.textContent = emoji;
+                    cell.appendChild(emojiDiv);
+                    
+                    const countDiv = document.createElement('div');
+                    countDiv.className = 'text-xs font-bold text-gray-700';
+                    countDiv.textContent = `${count}回`;
+                    cell.appendChild(countDiv);
+                    
+                    // クリックで詳細モーダルを表示
+                    cell.addEventListener('click', () => showDetailModal(dateStr, dayRecords));
+                } else {
+                    // 記録なし - クリックで新規記録
+                    const emptyDiv = document.createElement('div');
+                    emptyDiv.className = 'text-gray-300 text-xs';
+                    emptyDiv.textContent = '+';
+                    cell.appendChild(emptyDiv);
+                    
+                    // クリックでその日付の記録画面を開く
+                    cell.addEventListener('click', () => {
+                        showRecordScreen(dateStr);
+                    });
+                }
+                
+                calendar.appendChild(cell);
+            }
+        }
+
+        // 日付のフォーマット (YYYY-MM-DD)
+        function formatDate(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        // 日付のフォーマット (YYYY年MM月DD日)
+        function formatDateJa(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+            const y = date.getFullYear();
+            const m = date.getMonth() + 1;
+            const d = date.getDate();
+            const w = weekdays[date.getDay()];
+            return `${y}年${m}月${d}日（${w}）`;
+        }
+
+        // 1日の記録から絵文字と回数を計算
+        function calculateDaySummary(dayRecords) {
+            // 「出なかった」(bristol=8)を除外
+            const validRecords = dayRecords.filter(r => r.bristol !== 8);
+            
+            if (validRecords.length === 0) {
+                // 「出なかった」のみの場合
+                return { emoji: '🚫', count: 0 };
+            }
+            
+            const count = validRecords.length;
+            
+            // 平均スケールを計算
+            const avgBristol = validRecords.reduce((sum, r) => sum + r.bristol, 0) / validRecords.length;
+            
+            // 絵文字を決定
+            let emoji;
+            if (avgBristol >= 4 && avgBristol < 5) {
+                emoji = '😊'; // 快調
+            } else if ((avgBristol >= 3 && avgBristol < 4) || (avgBristol >= 6 && avgBristol < 7)) {
+                emoji = '😐'; // 普通
+            } else {
+                emoji = '😣'; // 不調
+            }
+            
+            return { emoji, count };
+        }
+
+        // 月を変更
+        document.getElementById('prevMonth').addEventListener('click', () => {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar();
+        });
+
+        document.getElementById('nextMonth').addEventListener('click', () => {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar();
+        });
+
+        // ========================================
+        // 詳細モーダル
+        // ========================================
+        const detailModal = document.getElementById('detailModal');
+        const modalContent = document.getElementById('modalContent');
+        const modalDate = document.getElementById('modalDate');
+
+        function showDetailModal(dateStr, dayRecords) {
+            modalDate.textContent = formatDateJa(dateStr);
+            
+            // モーダル内容を生成
+            modalContent.innerHTML = '';
+            
+            dayRecords.sort((a, b) => a.time.localeCompare(b.time));
+            
+            dayRecords.forEach((record, index) => {
+                const recordCard = document.createElement('div');
+                recordCard.className = 'bg-gray-50 rounded-xl p-4 space-y-2';
+                
+                const bristolLabels = {
+                    1: 'タイプ1: 硬い塊',
+                    2: 'タイプ2: ゴツゴツ',
+                    3: 'タイプ3: ひび割れ',
+                    4: 'タイプ4: なめらか',
+                    5: 'タイプ5: 柔らか塊',
+                    6: 'タイプ6: 断片',
+                    7: 'タイプ7: 液体',
+                    8: '出なかった'
+                };
+                
+                const colorLabels = ['白〜灰色', '薄い黄色', '黄色', '黄土色', '茶色', '焦げ茶色', '緑色', '赤色⚠️', '黒色⚠️'];
+                
+                const amountLabels = {
+                    1: 'ごく少量（～50g、いちご1個分）',
+                    2: '少量（50g～100g、みかん1個分）',
+                    3: '普通（100g～200g、バナナ1本分）',
+                    4: '多め（200g～300g、りんご1個分）',
+                    5: 'とても多い（300g～、バナナ2本分）'
+                };
+                
+                recordCard.innerHTML = `
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-bold text-purple-600">記録 ${index + 1}</span>
+                        <span class="text-sm text-gray-600">${record.time}</span>
+                    </div>
+                    <div class="space-y-2 text-sm mb-3">
+                        <div><span class="font-semibold">💩 形状:</span> ${bristolLabels[record.bristol]}</div>
+                        <div><span class="font-semibold">📏 量:</span> ${amountLabels[record.amount]}</div>
+                        <div><span class="font-semibold">👃 におい:</span> ${record.smell}</div>
+                        <div><span class="font-semibold">🎨 色:</span> ${colorLabels[record.color - 1]}</div>
+                        <div><span class="font-semibold">✨ すっきり感:</span> ${record.relief}</div>
+                    </div>
+                    ${record.memo ? `<div class="text-sm bg-white rounded-lg p-2 mb-3"><span class="font-semibold">📝 メモ:</span> ${record.memo}</div>` : ''}
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="editRecord(${record.id})" class="flex-1 bg-blue-500 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-blue-600 transition active:scale-95">
+                            ✏️ 編集
+                        </button>
+                        <button onclick="deleteRecord(${record.id}, '${dateStr}')" class="flex-1 bg-red-500 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-red-600 transition active:scale-95">
+                            🗑️ 削除
+                        </button>
+                    </div>
+                `;
+                
+                modalContent.appendChild(recordCard);
+            });
+            
+            // 新しい記録を追加ボタン
+            const addButton = document.createElement('button');
+            addButton.className = 'w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition active:scale-95 mt-4';
+            addButton.innerHTML = '➕ この日に記録を追加';
+            addButton.onclick = () => {
+                closeDetailModal();
+                showRecordScreen(dateStr);
+            };
+            modalContent.appendChild(addButton);
+            
+            detailModal.classList.remove('hidden');
+            detailModal.classList.add('flex');
+        }
+
+        function closeDetailModal() {
+            detailModal.classList.remove('flex');
+            detailModal.classList.add('hidden');
+        }
+
+        document.getElementById('closeModal').addEventListener('click', closeDetailModal);
+        detailModal.addEventListener('click', (e) => {
+            if (e.target === detailModal) {
+                closeDetailModal();
+            }
+        });
+
+        // ========================================
+        // 記録フォーム
+        // ========================================
+        let formData = {
+            bristol: null,
+            amount: null,
+            smell: null,
+            color: null,
+            relief: null,
+            memo: ''
+        };
+        
+        let editingRecordId = null; // 編集中の記録ID
+        let selectedDate = null; // 選択された日付
+        let selectedTime = null; // 選択された時刻
+
+        // ボタン選択処理
+        function setupButtons(className, property) {
+            const buttons = document.querySelectorAll(`.${className}`);
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // 同じグループの選択を解除
+                    buttons.forEach(b => b.classList.remove('selected'));
+                    // 選択
+                    btn.classList.add('selected');
+                    formData[property] = parseInt(btn.dataset.value);
+                });
+            });
+        }
+
+        setupButtons('bristol-btn', 'bristol');
+        setupButtons('amount-btn', 'amount');
+        setupButtons('smell-btn', 'smell');
+        setupButtons('color-btn', 'color');
+        setupButtons('relief-btn', 'relief');
+
+        // メモ入力
+        document.getElementById('memoInput').addEventListener('input', (e) => {
+            formData.memo = e.target.value;
+        });
+        
+        // 日付・時刻の変更
+        document.getElementById('dateInput').addEventListener('change', (e) => {
+            selectedDate = e.target.value;
+        });
+        
+        document.getElementById('timeInput').addEventListener('change', (e) => {
+            selectedTime = e.target.value;
+        });
+
+        // フォームをリセット
+        function resetForm() {
+            editingRecordId = null;
+            selectedDate = null;
+            selectedTime = null;
+            
+            formData = {
+                bristol: null,
+                amount: null,
+                smell: null,
+                color: null,
+                relief: null,
+                memo: ''
+            };
+            
+            document.querySelectorAll('.record-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            document.getElementById('memoInput').value = '';
+            document.getElementById('saveBtn').textContent = '保存する';
+        }
+
+        // 保存ボタン
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            // バリデーション
+            if (formData.bristol === null) {
+                alert('ブリストルスケールを選択してください');
+                return;
+            }
+            if (formData.amount === null) {
+                alert('量を選択してください');
+                return;
+            }
+            if (formData.smell === null) {
+                alert('においを選択してください');
+                return;
+            }
+            if (formData.color === null) {
+                alert('色を選択してください');
+                return;
+            }
+            if (formData.relief === null) {
+                alert('すっきり感を選択してください');
+                return;
+            }
+            
+            if (editingRecordId) {
+                // 編集モード：既存の記録を更新
+                const index = records.findIndex(r => r.id === editingRecordId);
+                if (index !== -1) {
+                    records[index] = {
+                        ...records[index],
+                        date: selectedDate || records[index].date,
+                        time: selectedTime || records[index].time,
+                        bristol: formData.bristol,
+                        amount: formData.amount,
+                        smell: formData.smell,
+                        color: formData.color,
+                        relief: formData.relief,
+                        memo: formData.memo
+                    };
+                    saveRecords();
+                    alert('記録を更新しました！');
+                }
+            } else {
+                // 新規作成モード
+                const now = new Date();
+                const record = {
+                    id: now.getTime(),
+                    date: selectedDate || formatDate(now),
+                    time: selectedTime || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+                    bristol: formData.bristol,
+                    amount: formData.amount,
+                    smell: formData.smell,
+                    color: formData.color,
+                    relief: formData.relief,
+                    memo: formData.memo
+                };
+                
+                records.push(record);
+                saveRecords();
+                alert('記録を保存しました！');
+            }
+            
+            showReportScreen();
+        });
+
+        // ========================================
+        // 編集・削除機能
+        // ========================================
+        function editRecord(recordId) {
+            const record = records.find(r => r.id === recordId);
+            if (record) {
+                showRecordScreenForEdit(record);
+            }
+        }
+        
+        function deleteRecord(recordId, dateStr) {
+            if (confirm('この記録を削除しますか？')) {
+                records = records.filter(r => r.id !== recordId);
+                saveRecords();
+                
+                // モーダルの内容を更新
+                const dayRecords = records.filter(r => r.date === dateStr);
+                if (dayRecords.length > 0) {
+                    // まだ記録が残っている場合は再表示
+                    closeDetailModal();
+                    setTimeout(() => showDetailModal(dateStr, dayRecords), 100);
+                } else {
+                    // 記録がなくなった場合はモーダルを閉じる
+                    closeDetailModal();
+                }
+                
+                renderCalendar();
+                alert('記録を削除しました');
+            }
+        }
+
+        // ========================================
+        // ナビゲーション
+        // ========================================
+        document.getElementById('addRecordBtn').addEventListener('click', () => {
+            editingRecordId = null;
+            showRecordScreen();
+        });
+        
+        document.getElementById('backBtn').addEventListener('click', () => {
+            if (editingRecordId && confirm('編集中の内容を破棄しますか？')) {
+                resetForm();
+                showReportScreen();
+            } else if (!editingRecordId) {
+                showReportScreen();
+            }
+        });
+
+        // ========================================
+        // 初期化
+        // ========================================
+        function init() {
+            loadRecords();
+            showReportScreen(); // デフォルトでレポート画面を表示
+        }
+
+        // アプリ起動
+        init();
+    </script>
+</body>
+</html>
