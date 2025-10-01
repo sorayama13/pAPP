@@ -256,7 +256,7 @@
                 </div>
 
                 <!-- 量 -->
-                <div class="bg-white rounded-xl shadow-md p-4">
+                <div id="amountSection" class="bg-white rounded-xl shadow-md p-4">
                     <h2 class="text-lg font-bold text-gray-800 mb-3">📏 量</h2>
                     <p class="text-sm text-gray-600 mb-4">5段階で評価してください</p>
                     <div class="space-y-2">
@@ -299,7 +299,7 @@
                 </div>
 
                 <!-- におい -->
-                <div class="bg-white rounded-xl shadow-md p-4">
+                <div id="smellSection" class="bg-white rounded-xl shadow-md p-4">
                     <h2 class="text-lg font-bold text-gray-800 mb-3">👃 におい</h2>
                     <p class="text-sm text-gray-600 mb-4">3段階で評価してください</p>
                     <div class="flex gap-3">
@@ -322,7 +322,7 @@
                 </div>
 
                 <!-- 色 -->
-                <div class="bg-white rounded-xl shadow-md p-4">
+                <div id="colorSection" class="bg-white rounded-xl shadow-md p-4">
                     <h2 class="text-lg font-bold text-gray-800 mb-3">🎨 色</h2>
                     <p class="text-sm text-gray-600 mb-4">便の色を選択してください</p>
                     <div class="grid grid-cols-3 gap-3">
@@ -384,7 +384,7 @@
                 </div>
 
                 <!-- すっきり感 -->
-                <div class="bg-white rounded-xl shadow-md p-4">
+                <div id="reliefSection" class="bg-white rounded-xl shadow-md p-4">
                     <h2 class="text-lg font-bold text-gray-800 mb-3">✨ すっきり感</h2>
                     <p class="text-sm text-gray-600 mb-4">5段階で評価してください</p>
                     <div class="flex gap-2">
@@ -587,6 +587,9 @@
             
             // 保存ボタンのテキストを変更
             document.getElementById('saveBtn').textContent = '更新する';
+            
+            // 「出なかった」の場合は他のフィールドを非表示
+            toggleOtherFields(record.bristol);
             
             closeDetailModal();
             reportScreen.classList.add('hidden');
@@ -791,17 +794,25 @@
                     5: 'とても多い（300g～、バナナ2本分）'
                 };
                 
+                // 「出なかった」の場合は他の項目を表示しない
+                let detailsHtml = `<div><span class="font-semibold">💩 形状:</span> ${bristolLabels[record.bristol]}</div>`;
+                
+                if (record.bristol !== 8) {
+                    detailsHtml += `
+                        <div><span class="font-semibold">📏 量:</span> ${record.amount ? amountLabels[record.amount] : '-'}</div>
+                        <div><span class="font-semibold">👃 におい:</span> ${record.smell || '-'}</div>
+                        <div><span class="font-semibold">🎨 色:</span> ${record.color ? colorLabels[record.color - 1] : '-'}</div>
+                        <div><span class="font-semibold">✨ すっきり感:</span> ${record.relief || '-'}</div>
+                    `;
+                }
+                
                 recordCard.innerHTML = `
                     <div class="flex items-center justify-between mb-3">
                         <span class="font-bold text-purple-600">記録 ${index + 1}</span>
                         <span class="text-sm text-gray-600">${record.time}</span>
                     </div>
                     <div class="space-y-2 text-sm mb-3">
-                        <div><span class="font-semibold">💩 形状:</span> ${bristolLabels[record.bristol]}</div>
-                        <div><span class="font-semibold">📏 量:</span> ${amountLabels[record.amount]}</div>
-                        <div><span class="font-semibold">👃 におい:</span> ${record.smell}</div>
-                        <div><span class="font-semibold">🎨 色:</span> ${colorLabels[record.color - 1]}</div>
-                        <div><span class="font-semibold">✨ すっきり感:</span> ${record.relief}</div>
+                        ${detailsHtml}
                     </div>
                     ${record.memo ? `<div class="text-sm bg-white rounded-lg p-2 mb-3"><span class="font-semibold">📝 メモ:</span> ${record.memo}</div>` : ''}
                     <div class="flex gap-2 mt-3">
@@ -869,8 +880,43 @@
                     // 選択
                     btn.classList.add('selected');
                     formData[property] = parseInt(btn.dataset.value);
+                    
+                    // ブリストルスケールの場合、「出なかった」選択時の処理
+                    if (property === 'bristol') {
+                        toggleOtherFields(parseInt(btn.dataset.value));
+                    }
                 });
             });
+        }
+        
+        // 「出なかった」選択時に他のフィールドを非表示/表示
+        function toggleOtherFields(bristolValue) {
+            const otherFields = [
+                document.querySelector('.bg-white.rounded-xl.shadow-md.p-4:has(#amountSection)'),
+                document.querySelector('.bg-white.rounded-xl.shadow-md.p-4:has(#smellSection)'),
+                document.querySelector('.bg-white.rounded-xl.shadow-md.p-4:has(#colorSection)'),
+                document.querySelector('.bg-white.rounded-xl.shadow-md.p-4:has(#reliefSection)')
+            ];
+            
+            // IDで特定
+            const amountSection = document.getElementById('amountSection');
+            const smellSection = document.getElementById('smellSection');
+            const colorSection = document.getElementById('colorSection');
+            const reliefSection = document.getElementById('reliefSection');
+            
+            if (bristolValue === 8) {
+                // 「出なかった」の場合は他のフィールドを非表示
+                if (amountSection) amountSection.style.display = 'none';
+                if (smellSection) smellSection.style.display = 'none';
+                if (colorSection) colorSection.style.display = 'none';
+                if (reliefSection) reliefSection.style.display = 'none';
+            } else {
+                // それ以外の場合は表示
+                if (amountSection) amountSection.style.display = 'block';
+                if (smellSection) smellSection.style.display = 'block';
+                if (colorSection) colorSection.style.display = 'block';
+                if (reliefSection) reliefSection.style.display = 'block';
+            }
         }
 
         setupButtons('bristol-btn', 'bristol');
@@ -923,21 +969,25 @@
                 alert('ブリストルスケールを選択してください');
                 return;
             }
-            if (formData.amount === null) {
-                alert('量を選択してください');
-                return;
-            }
-            if (formData.smell === null) {
-                alert('においを選択してください');
-                return;
-            }
-            if (formData.color === null) {
-                alert('色を選択してください');
-                return;
-            }
-            if (formData.relief === null) {
-                alert('すっきり感を選択してください');
-                return;
+            
+            // 「出なかった」(bristol=8)以外の場合は、他の項目も必須
+            if (formData.bristol !== 8) {
+                if (formData.amount === null) {
+                    alert('量を選択してください');
+                    return;
+                }
+                if (formData.smell === null) {
+                    alert('においを選択してください');
+                    return;
+                }
+                if (formData.color === null) {
+                    alert('色を選択してください');
+                    return;
+                }
+                if (formData.relief === null) {
+                    alert('すっきり感を選択してください');
+                    return;
+                }
             }
             
             // 未来の日付チェック
@@ -957,10 +1007,10 @@
                         date: selectedDate || records[index].date,
                         time: selectedTime || records[index].time,
                         bristol: formData.bristol,
-                        amount: formData.amount,
-                        smell: formData.smell,
-                        color: formData.color,
-                        relief: formData.relief,
+                        amount: formData.bristol === 8 ? null : formData.amount,
+                        smell: formData.bristol === 8 ? null : formData.smell,
+                        color: formData.bristol === 8 ? null : formData.color,
+                        relief: formData.bristol === 8 ? null : formData.relief,
                         memo: formData.memo
                     };
                     saveRecords();
@@ -974,10 +1024,10 @@
                     date: selectedDate || formatDate(now),
                     time: selectedTime || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
                     bristol: formData.bristol,
-                    amount: formData.amount,
-                    smell: formData.smell,
-                    color: formData.color,
-                    relief: formData.relief,
+                    amount: formData.bristol === 8 ? null : formData.amount,
+                    smell: formData.bristol === 8 ? null : formData.smell,
+                    color: formData.bristol === 8 ? null : formData.color,
+                    relief: formData.bristol === 8 ? null : formData.relief,
                     memo: formData.memo
                 };
                 
