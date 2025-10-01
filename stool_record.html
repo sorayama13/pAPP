@@ -141,7 +141,7 @@
                     <div class="flex gap-3">
                         <div class="flex-1">
                             <label class="block text-xs text-gray-500 mb-1">日付</label>
-                            <input type="date" id="dateInput" class="w-full border-2 border-gray-200 rounded-lg p-3 text-sm focus:border-purple-500 focus:outline-none transition cursor-pointer">
+                            <input type="date" id="dateInput" max="" class="w-full border-2 border-gray-200 rounded-lg p-3 text-sm focus:border-purple-500 focus:outline-none transition cursor-pointer">
                         </div>
                         <div class="flex-1">
                             <label class="block text-xs text-gray-500 mb-1">時刻</label>
@@ -495,6 +495,10 @@
             if (!editingRecordId) {
                 resetForm();
                 
+                // 日付入力の最大値を今日に設定
+                const today = formatDate(getToday());
+                document.getElementById('dateInput').max = today;
+                
                 // 日付と時刻を設定
                 if (date) {
                     selectedDate = date;
@@ -511,6 +515,11 @@
                 }
                 document.getElementById('timeInput').value = selectedTime;
             }
+        }
+        
+        function getToday() {
+            const now = new Date();
+            return new Date(now.getFullYear(), now.getMonth(), now.getDate());
         }
         
         // 編集モードで記録画面を開く
@@ -613,13 +622,23 @@
                 calendar.appendChild(emptyCell);
             }
             
+            // 今日の日付を取得
+            const today = getToday();
+            
             // 日付セルを追加
             for (let day = 1; day <= daysInMonth; day++) {
                 const cell = document.createElement('div');
-                cell.className = 'calendar-cell border border-gray-200 rounded-lg p-1 cursor-pointer hover:bg-purple-50 transition flex flex-col items-center justify-center text-center';
-                
-                const dateStr = formatDate(new Date(currentYear, currentMonth, day));
+                const dateObj = new Date(currentYear, currentMonth, day);
+                const dateStr = formatDate(dateObj);
                 const dayRecords = records.filter(r => r.date === dateStr);
+                const isFuture = dateObj > today;
+                
+                // 未来の日付かどうかでスタイルを変更
+                if (isFuture) {
+                    cell.className = 'calendar-cell border border-gray-200 rounded-lg p-1 flex flex-col items-center justify-center text-center opacity-40';
+                } else {
+                    cell.className = 'calendar-cell border border-gray-200 rounded-lg p-1 cursor-pointer hover:bg-purple-50 transition flex flex-col items-center justify-center text-center';
+                }
                 
                 // 日付番号
                 const dateNum = document.createElement('div');
@@ -643,8 +662,8 @@
                     
                     // クリックで詳細モーダルを表示
                     cell.addEventListener('click', () => showDetailModal(dateStr, dayRecords));
-                } else {
-                    // 記録なし - クリックで新規記録
+                } else if (!isFuture) {
+                    // 記録なし かつ 未来でない場合 - クリックで新規記録
                     const emptyDiv = document.createElement('div');
                     emptyDiv.className = 'text-gray-300 text-xs';
                     emptyDiv.textContent = '+';
@@ -654,6 +673,12 @@
                     cell.addEventListener('click', () => {
                         showRecordScreen(dateStr);
                     });
+                } else {
+                    // 未来の日付 - 何も表示しない
+                    const emptyDiv = document.createElement('div');
+                    emptyDiv.className = 'text-gray-300 text-xs';
+                    emptyDiv.textContent = '-';
+                    cell.appendChild(emptyDiv);
                 }
                 
                 calendar.appendChild(cell);
@@ -912,6 +937,14 @@
             }
             if (formData.relief === null) {
                 alert('すっきり感を選択してください');
+                return;
+            }
+            
+            // 未来の日付チェック
+            const today = formatDate(getToday());
+            const inputDate = selectedDate || formatDate(new Date());
+            if (inputDate > today) {
+                alert('未来の日付には記録できません');
                 return;
             }
             
