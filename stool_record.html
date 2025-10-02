@@ -875,15 +875,26 @@
             const buttons = document.querySelectorAll(`.${className}`);
             buttons.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    // 同じグループの選択を解除
-                    buttons.forEach(b => b.classList.remove('selected'));
-                    // 選択
-                    btn.classList.add('selected');
-                    formData[property] = parseInt(btn.dataset.value);
-                    
-                    // ブリストルスケールの場合、「出なかった」選択時の処理
-                    if (property === 'bristol') {
-                        toggleOtherFields(parseInt(btn.dataset.value));
+                    // 既に選択されている場合は選択解除
+                    if (btn.classList.contains('selected')) {
+                        btn.classList.remove('selected');
+                        formData[property] = null;
+                        
+                        // ブリストルスケールの場合、「出なかった」選択解除時の処理
+                        if (property === 'bristol') {
+                            toggleOtherFields(null);
+                        }
+                    } else {
+                        // 同じグループの選択を解除
+                        buttons.forEach(b => b.classList.remove('selected'));
+                        // 選択
+                        btn.classList.add('selected');
+                        formData[property] = parseInt(btn.dataset.value);
+                        
+                        // ブリストルスケールの場合、「出なかった」選択時の処理
+                        if (property === 'bristol') {
+                            toggleOtherFields(parseInt(btn.dataset.value));
+                        }
                     }
                 });
             });
@@ -910,6 +921,12 @@
                 if (smellSection) smellSection.style.display = 'none';
                 if (colorSection) colorSection.style.display = 'none';
                 if (reliefSection) reliefSection.style.display = 'none';
+            } else if (bristolValue === null) {
+                // ブリストルスケールが選択解除された場合は表示
+                if (amountSection) amountSection.style.display = 'block';
+                if (smellSection) smellSection.style.display = 'block';
+                if (colorSection) colorSection.style.display = 'block';
+                if (reliefSection) reliefSection.style.display = 'block';
             } else {
                 // それ以外の場合は表示
                 if (amountSection) amountSection.style.display = 'block';
@@ -964,31 +981,13 @@
 
         // 保存ボタン
         document.getElementById('saveBtn').addEventListener('click', () => {
-            // バリデーション
+            // バリデーション（ブリストルスケールのみ必須）
             if (formData.bristol === null) {
                 alert('ブリストルスケールを選択してください');
                 return;
             }
             
-            // 「出なかった」(bristol=8)以外の場合は、他の項目も必須
-            if (formData.bristol !== 8) {
-                if (formData.amount === null) {
-                    alert('量を選択してください');
-                    return;
-                }
-                if (formData.smell === null) {
-                    alert('においを選択してください');
-                    return;
-                }
-                if (formData.color === null) {
-                    alert('色を選択してください');
-                    return;
-                }
-                if (formData.relief === null) {
-                    alert('すっきり感を選択してください');
-                    return;
-                }
-            }
+            // 他の項目は任意（バリデーションなし）
             
             // 未来の日付チェック
             const today = formatDate(getToday());
