@@ -1714,6 +1714,117 @@
                 font-size: 9px;
             }
         }
+
+        /* 詳細表示用のスタイル */
+        .calendar-day.selected {
+            background: #e8f5e8 !important;
+            border: 2px solid #4CAF50 !important;
+            transform: scale(1.05);
+        }
+
+        .calendar-detail-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            max-width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+
+        .calendar-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .calendar-detail-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .calendar-detail-close {
+            background: #f8f9fa;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 18px;
+            color: #666;
+        }
+
+        .calendar-detail-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .detail-section {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .detail-section-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .detail-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-label {
+            color: #666;
+        }
+
+        .detail-value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .detail-actions {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .detail-edit-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .calendar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1999;
+        }
         
     </style>
 </head>
@@ -1900,6 +2011,7 @@
         let calendarYear = new Date().getFullYear();
         let calendarMonth = new Date().getMonth();
         let biweeklyOffset = 0; // 2週間レポートの期間オフセット（0=今週基準、-1=2週間前など）
+        let selectedDate = null; // 選択された日付（詳細表示用）
 
         // 気づきタグ
         const insightTags = [
@@ -3669,7 +3781,7 @@
                                  plantsClass.includes('high');
                 
                 calendarHTML += `
-                    <div class="calendar-day ${isPerfect ? 'perfect' : ''} ${bgClass}" onclick="jumpToDate(${calendarYear}, ${calendarMonth}, ${day})">
+                    <div class="calendar-day ${isPerfect ? 'perfect' : ''} ${bgClass}" onclick="handleDateClick(${calendarYear}, ${calendarMonth}, ${day})">
                         <div class="day-number">${day}</div>
                         <div class="health-flower">
                             <div class="flower-center" ${!fermentedCount && !fiberAmount && !plantCount ? 'style="background: #ddd;"' : ''}></div>
@@ -3717,6 +3829,175 @@
             
             // カレンダー再生成
             generateCalendar();
+        }
+
+        // 日付クリック処理（詳細表示 or 記録画面遷移）
+        function handleDateClick(year, month, day) {
+            const targetDate = new Date(year, month, day);
+            const dateKey = getDateKey(targetDate);
+            
+            // 既に選択されている日付をクリックした場合は記録画面に遷移
+            if (selectedDate && selectedDate.getTime() === targetDate.getTime()) {
+                jumpToDate(year, month, day);
+                return;
+            }
+            
+            // 新しい日付を選択して詳細表示
+            selectedDate = targetDate;
+            showDateDetail(targetDate);
+        }
+
+        // 日付詳細表示
+        function showDateDetail(date) {
+            const dateKey = getDateKey(date);
+            const dayData = appData[dateKey] || { fermented: [], fiber: 0, fiberDetail: {}, plants: [], memo: '', insights: [] };
+            
+            // 既存のポップアップを削除
+            const existingPopup = document.querySelector('.calendar-detail-popup');
+            if (existingPopup) {
+                existingPopup.remove();
+            }
+            
+            // オーバーレイ作成
+            const overlay = document.createElement('div');
+            overlay.className = 'calendar-overlay';
+            overlay.onclick = closeDateDetail;
+            
+            // ポップアップ作成
+            const popup = document.createElement('div');
+            popup.className = 'calendar-detail-popup';
+            
+            const dateStr = date.toLocaleDateString('ja-JP', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            });
+            
+            // 食物繊維詳細の生成
+            let fiberDetails = '';
+            if (dayData.fiberDetail && Object.keys(dayData.fiberDetail).length > 0) {
+                Object.entries(dayData.fiberDetail).forEach(([name, data]) => {
+                    if (data && data.count > 0) {
+                        const getDisplayUnit = (categoryName, count) => {
+                            if (categoryName === '玄米・雑穀米') {
+                                return `茶碗${count}膳`;
+                            }
+                            const unitMap = {
+                                '生野菜サラダ': '皿',
+                                '温野菜・煮物': '皿',
+                                '野菜スープ・味噌汁': '杯',
+                                '海藻類': '皿',
+                                '納豆': 'パック',
+                                'きのこ類': '皿',
+                                '果物': '個'
+                            };
+                            return unitMap[categoryName] || '個';
+                        };
+                        
+                        const count = Math.round(data.count * 2) / 2;
+                        const displayUnit = getDisplayUnit(name, count);
+                        fiberDetails += `<div class="detail-item"><span class="detail-label">${name}</span><span class="detail-value">${count}${displayUnit} (${data.totalValue.toFixed(1)}g)</span></div>`;
+                    }
+                });
+            }
+            
+            // 気づきタグの表示
+            let insightsDisplay = '';
+            if (dayData.insights && dayData.insights.length > 0) {
+                const insightLabels = {
+                    'more': '多め',
+                    'less': '少なめ',
+                    'spicy': '辛い',
+                    'water-more': '水分多',
+                    'water-less': '水分少',
+                    'caffeine': 'カフェイン',
+                    'exercise': '運動',
+                    'sleep-lack': '睡眠不足',
+                    'medicine': '薬'
+                };
+                
+                insightsDisplay = dayData.insights.map(id => {
+                    const icon = getInsightIcon(id);
+                    const label = insightLabels[id] || id;
+                    return `${icon} ${label}`;
+                }).join(', ');
+            }
+            
+            popup.innerHTML = `
+                <div class="calendar-detail-header">
+                    <div class="calendar-detail-title">${dateStr}</div>
+                    <button class="calendar-detail-close" onclick="closeDateDetail()">×</button>
+                </div>
+                <div class="calendar-detail-content">
+                    <div class="detail-section">
+                        <div class="detail-section-title">発酵食品</div>
+                        <div class="detail-item">
+                            <span class="detail-label">種類数</span>
+                            <span class="detail-value">${dayData.fermented.length}種類</span>
+                        </div>
+                        ${dayData.fermented.length > 0 ? `<div class="detail-item"><span class="detail-label">内容</span><span class="detail-value">${dayData.fermented.join(', ')}</span></div>` : ''}
+                    </div>
+                    
+                    <div class="detail-section">
+                        <div class="detail-section-title">食物繊維</div>
+                        <div class="detail-item">
+                            <span class="detail-label">合計</span>
+                            <span class="detail-value">${dayData.fiber.toFixed(1)}g</span>
+                        </div>
+                        ${fiberDetails ? `<div style="margin-top: 8px;">${fiberDetails}</div>` : ''}
+                    </div>
+                    
+                    <div class="detail-section">
+                        <div class="detail-section-title">植物多様性</div>
+                        <div class="detail-item">
+                            <span class="detail-label">種類数</span>
+                            <span class="detail-value">${dayData.plants.length}種類</span>
+                        </div>
+                        ${dayData.plants.length > 0 ? `<div class="detail-item"><span class="detail-label">内容</span><span class="detail-value">${dayData.plants.join(', ')}</span></div>` : ''}
+                    </div>
+                    
+                    ${insightsDisplay ? `
+                    <div class="detail-section">
+                        <div class="detail-section-title">気づき</div>
+                        <div class="detail-item">
+                            <span class="detail-label">内容</span>
+                            <span class="detail-value">${insightsDisplay}</span>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${dayData.memo ? `
+                    <div class="detail-section">
+                        <div class="detail-section-title">メモ</div>
+                        <div class="detail-item">
+                            <span class="detail-value">${dayData.memo}</span>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="detail-actions">
+                    <button class="detail-edit-btn" onclick="editDate(${year}, ${month}, ${day})">この日を編集</button>
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+            document.body.appendChild(popup);
+        }
+
+        // 詳細表示を閉じる
+        function closeDateDetail() {
+            const popup = document.querySelector('.calendar-detail-popup');
+            const overlay = document.querySelector('.calendar-overlay');
+            if (popup) popup.remove();
+            if (overlay) overlay.remove();
+            selectedDate = null;
+        }
+
+        // 日付編集（記録画面に遷移）
+        function editDate(year, month, day) {
+            closeDateDetail();
+            jumpToDate(year, month, day);
         }
 
         // 特定の日付にジャンプ
