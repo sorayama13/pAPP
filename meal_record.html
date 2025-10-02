@@ -2653,7 +2653,7 @@
                         // カテゴリに応じた適切な単位を取得
                         const getDisplayUnit = (categoryName, count) => {
                             if (categoryName === '玄米・雑穀米') {
-                                return count === 1 ? '茶碗1膳' : '茶碗0.5膳';
+                                return `茶碗${count}膳`;
                             }
                             
                             const unitMap = {
