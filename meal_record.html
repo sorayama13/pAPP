@@ -2181,6 +2181,16 @@
                 insights: []
             };
             
+            // すべての食物繊維カウンターを非表示にリセット
+            document.querySelectorAll('.fiber-counter').forEach(counter => {
+                counter.style.display = 'none';
+            });
+            
+            // すべての食物繊維ボタンの選択状態をリセット
+            document.querySelectorAll('.fiber-quick-button').forEach(button => {
+                button.classList.remove('selected');
+            });
+            
             updateFermentedDisplay(dayData.fermented);
             updateFiberDisplay(dayData.fiber, dayData.fiberDetail);
             updatePlantsDisplay(dayData.plants);
