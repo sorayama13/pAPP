@@ -2650,12 +2650,31 @@
                     
                     // 新しいデータ構造の場合
                     if (typeof data === 'object' && data.count !== undefined) {
-                        const unit = data.unit ? data.unit.split('(')[0] : '';
+                        // カテゴリに応じた適切な単位を取得
+                        const getDisplayUnit = (categoryName, count) => {
+                            if (categoryName === '玄米・雑穀米') {
+                                return count === 1 ? '茶碗1膳' : '茶碗0.5膳';
+                            }
+                            
+                            const unitMap = {
+                                '生野菜サラダ': '皿',
+                                '温野菜・煮物': '皿',
+                                '野菜スープ・味噌汁': '杯',
+                                '海藻類': '皿',
+                                '納豆': 'パック',
+                                'きのこ類': '皿',
+                                '果物': '個'
+                            };
+                            return unitMap[categoryName] || '個';
+                        };
+                        
+                        const count = Math.round(data.count * 2) / 2; // 0.5刻みで丸める
+                        const displayUnit = getDisplayUnit(categoryName, count);
                         div.innerHTML = `
                             <div class="fiber-record-info">
                                 <div class="fiber-record-name">${categoryName}</div>
                                 <div class="fiber-record-value">
-                                    ${data.count}${unit} × ${data.value}g = ${data.totalValue.toFixed(1)}g
+                                    ${count}${displayUnit} × ${data.value}g = ${data.totalValue.toFixed(1)}g
                                 </div>
                             </div>
                             <button class="remove-fiber-btn" onclick="removeFiberRecord('${categoryName}')">削除</button>
